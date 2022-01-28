@@ -1,0 +1,37 @@
+import openpyxl,pprint
+from 树莓派数据.ExcelObjs import ExcelOperator
+import pandas as pd
+from matplotlib import pyplot as plt
+from IRmsSolver import IRMS
+import math
+pd.set_option('display.unicode.east_asian_width',True)
+
+a=[4,5,7,10,13,16,19,22,25]
+b=[3,6,8,9,11,12,14,17,20,23,26]
+c=[15,18,21,24,27,28,29,30,31,32]
+d=[500,1000,1500]
+
+for i in d:
+
+    wb=openpyxl.load_workbook('E:/Desktop/加工中心动刚度/datas/树莓派数据/工件3/空转转速'+str(i)+'.xlsx')
+    ws=wb.active
+
+    ws1=wb.create_sheet('rms')
+    obj=ExcelOperator(wb,ws)
+    rows=ws.max_row
+    cols=ws.max_column
+    #print('行: {}和列: {}：'.format(rows,cols))
+    r=obj.gettingCellByRange('A2:C'+str(rows))
+
+    rms=IRMS(r)
+    rms1=rms.irms()
+    obj_save=ExcelOperator(wb,ws1)
+    obj_save.writeValueFrom2ArrToSheet(rms1)
+    wb.save('E:/Desktop/加工中心动刚度/datas/树莓派数据/工件三rms/空转转速'+str(i)+'.xlsx')
+
+
+
+
+
+# filerms1=open('E:/Desktop/加工中心动刚度/datas/树莓派数据/工件一rms/rmstest02.py','w')
+# filerms1.write('rmstest02='+pprint.pformat(rms1))
