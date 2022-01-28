@@ -1,0 +1,152 @@
+#Class 'ExcelOperator' can realize the basic operation of Excel files.
+#Class 'SaveArrOrDictToPyFormation' can save arr or dict into the formation of py,which will be easier to import next.
+import openpyxl,pprint
+from openpyxl.utils import get_column_letter,column_index_from_string
+
+class ExcelOperator():
+    # wb = openpyxl.load_workbook('test.xlsx')
+    # ws = wb.active
+    def __init__(self,wb,ws):
+        self.wb=wb
+        self.ws=ws
+
+    def GettingSheetnames(self):
+        sheetNames=wb.sheetnames
+        print(sheetNames)
+
+    def CreateSheet(self,newsheet):
+        mySheet=wb.create_sheet(newsheet)
+
+    #read
+    def gettingCellByRange(self,rangestr):#输入形为A1:C5
+        cell_range=self.ws[rangestr]
+        res={}
+        i=0
+        for rowOfCellObjs in cell_range:
+            i+=1
+            tem=[]
+            for cellObjs in rowOfCellObjs:
+                tem.append(cellObjs.value)
+            res[str(i)]=tem
+        return res
+        #print(res)
+
+    def gettingCellBy2Range(self,rowsrange,colsrange):#输入形为：1:9,A:T
+        row_range = self.ws[rowsrange]
+        col_range = self.ws[colsrange]
+        datas={}
+        i=0
+        for col in col_range:
+            i+=1
+            data=[]
+            for cell in row_range:
+                tem=[]
+                for ce in cell:
+                    tem.append(ce.value)
+            data=tem
+            datas[str(i)]=tem
+        return datas
+        #print(datas)
+
+    def gettingCellByMaxAndMinRange(self,min_row,max_row,max_col):#输入形为：min_row=1,max_row=2,max_col=3
+        res2={}
+        i=0
+        for row in self.ws.iter_rows(min_row=min_row,max_row=max_row,max_col=max_col):
+            i+=1
+            tem=[]
+            for cell in row:
+                tem.append(cell.value)
+            res2[str(i)]=tem
+        return res2
+        #print(res2)
+
+    def returnColsAndClumns(self):
+        rows=self.ws.max_row
+        cols=self.ws.max_column
+        print('rows {},cols {}'.format(rows,cols))
+
+    def reverseFromLetterToNum(self,letter):
+        res=column_index_from_string(letter)
+        print(res)
+
+    def reverseFromNumToLetter(self,num):
+        res=get_column_letter(num)
+        print(res)
+
+    #创建新表单
+    def createNewSheet(self,location,newSheetName):
+        self.wb.create_sheet(index=location, title=newSheetName)
+
+    #删除表单
+    def removeSheet(self,sheetName):
+        self.wb.remove_sheet(wb.get_sheet_by_name(sheetName))
+
+    #将二维刘表写入表单中
+    def writeValueFrom2ArrToSheet(self,listName):
+        rows=listName
+        for row in rows:
+            self.ws.append([row])
+
+    #按照单元格位置及其值写入值
+    def writeValueFromCellLocationAndValue(self,row,col,value):
+        self.ws.cell(column=col, row=row, value=value)
+
+    #保存Excel
+    #保存到已有：wb=openpyxl.load_workbook('名字.xlsx')
+    #保存到新的：wb=openpyxl.Workbook('名字.xlsx')
+    # 1.这里要更改名字，防止保存失败源文件丢失；
+    # 2.保存的文件也包含源文件表单；
+    # 3.若要保存到新的excel中，使其不包含源文件表单内容，则wb=openpyxl.Workbook('名字.xlsx')
+    def saveExcel(self,newFileName):
+        self.wb.save(newFileName)
+
+
+#调用说明(read)
+# import openpyxl
+# from ExcelObjs import ExcelOperator
+# wb = openpyxl.load_workbook('test.xlsx')
+# ws = wb.active
+#or  ws=get_sheet_by_name('sheetTitle')
+# test=ExcelOperator(wb,ws)
+# test.gettingCellByRange('A1:C3')
+# test.reverseFromLetterToNum('C')
+# test.reverseFromNumToLetter(700)
+# test.gettingCellBy2Range('1:3','A:C')
+# test.gettingCellByMaxAndMinRange(1,3,3)
+
+#另外一种方法read
+# for row in range(1,sheet.max_row+1):
+#     #Each row in the spreadsheet has data
+#     b=sheet['B'+str(row)].value
+#     c=sheet['C'+str(row)].value
+#     d=sheet['D'+str(row)].value
+
+
+#调用说明(write)
+# wb = openpyxl.load_workbook('test.xlsx')
+# ws = wb.active
+# ws2=wb.create_sheet('new')
+# rows=[[1,2,3],
+#       [1,2,3],
+#       [1,2,3],
+#       ]
+# test=ExcelOperator(wb,ws2)
+# test.writeValueFrom2ArrToSheet(rows)
+# wb.save('new.xlsx')
+'''
+向字典新加键值对
+picnicItems={'apple':5,'cup':10}
+picnicItems.setdefault('sausage':0)####添加sausage其值为0
+'''
+
+
+#将名为listOrDictName的列表或字典保存到名为fileName的python文件中，其文件内部数据名为dataName
+#下次可直接将dataName导入并使用
+class SaveArrOrDictToPyFormation():
+    def __init__(self,listOrDictName):
+        self.listOrDictName=listOrDictName
+
+    #将列表、字典保存为.py格式文件，方便下次导入
+    def saveArrOrDict(self,fileName,dataName):
+        fileobj=open(fileName,'w')
+        fileobj.write(str(dataName)+'='+pprint.pformat(self.listOrDictName))
