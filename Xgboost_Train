@@ -1,0 +1,117 @@
+import time
+import xgboost as xgb
+from sklearn.datasets import load_diabetes, load_boston
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+import csv
+import pandas as pd
+#from libs.xgboost_plot import plot_training_merror
+from matplotlib import pyplot as plt
+import numpy as np
+import xlrd
+from openpyxl import load_workbook
+
+def excel2m(path, n):#读excel数据转为矩阵函数
+    data = xlrd.open_workbook(path)
+    table = data.sheets()[n]
+    nrows = table.nrows  # 行数
+    ncols = table.ncols  # 列数
+    datamatrix = np.zeros((nrows, ncols))
+    for x in range(ncols):
+        cols = table.col_values(x)
+        cols1 = np.matrix(cols)  # 把list转换为矩阵进行矩阵操作
+        datamatrix[:, x] = cols1 # 把数据进行存储
+    return datamatrix
+data = excel2m("问题三训练集&测试集_输入&预测输入集输出",0);labels = excel2m("问题三训练集&测试集_输入&预测输入集输出",1)#读数据;
+pre=excel2m("问题三训练集&测试集_输入&预测输入集输出",3)#未来几天
+pretest=excel2m("问题三训练集&测试集_输入&预测输入集输出",2)#测试
+preda=xgb.DMatrix(pre)
+predatatest=xgb.DMatrix(pretest)
+testres=[]
+aaa=[]
+for i in range(6):
+    # 拆分数据集
+    x_train, x_test, y_train, y_test = train_test_split(data, labels[:, i], test_size=0.2, random_state=7)
+    print("x_train: {}, x_test: {}".format(x_train.shape, x_test.shape))
+    # 构造XGBoost算法需要的输入格式：
+    dtrain = xgb.DMatrix(x_train, y_train)  # 训练集
+    dtest = xgb.DMatrix(x_test, y_test)  # 验证集
+    evals = [(dtrain, 'train'), (dtest, 'val')]  # 训练过程中进行验证
+    params = {
+        'tree_method': "gpu_hist",
+        'booster': 'gbtree',
+        'objective': 'reg:squarederror',
+        'max_depth': 6,
+        'eval_metric': 'mae',
+        'eta': 0.01,
+        'verbosity': 0,
+        'gpu_id': 0
+    }
+    # 模型训练、保存模型、绘制mae图像；
+    s_time = time.time()
+    train_res = {}
+    model = xgb.train(params, dtrain, num_boost_round=200,
+                      evals=evals,
+                      evals_result=train_res)
+    print("模型训练耗时: {}".format(time.time() - s_time))
+    print(train_res)
+    print("trian is: ")
+    print(type(train_res))
+    # 模型保存
+    save_path = "./model_regression.model"
+    model.save_model(save_path)
+    # train/val的merror绘图
+    merror_img_path = "./test/error.png"
+    # 模型预测，打印预测结果：
+    pred_data = model.predict(dtest)
+    res = mean_absolute_error(y_test, pred_data)
+    print(type(res))
+    # 导出
+    model.dump_model('dump.raw.txt')
+    model.dump_model('dump.raw.txt', 'featmap.txt')
+    # 绘制重要性特征图
+    #xgb.plot_importance(model)
+    #plt.savefig('ASO2.jpg')
+    #plt.show()
+    # 计算准确率
+    cnt1 = 0
+    cnt2 = 0
+    for i in range(len(y_test)):
+        if y_test[i] * (1 - 0.20) <= pred_data[i] <= y_test[i] * 1.20:
+            cnt1 += 1
+        else:
+            cnt2 += 1
+    print("Accuracy: %.2f %% " % (100 * cnt1 / (cnt1 + cnt2)))
+    # 对测试集进行预测
+    testres.append(model.predict(predatatest))
+    #testres = model.predict(predatatest)
+    ###预测未来三天天气质量
+    aaa.append(model.predict(preda))
+    #aaa= model.predict(preda)
+
+###保存预测结果到excel
+# 准备数据
+arr=testres
+testress = [[arr[j][i] for j in range(len(arr))] for i in range(len(arr[0]))]
+arrs=aaa
+aaas = [[arrs[j][i] for j in range(len(arrs))] for i in range(len(arrs[0]))]
+data_df = pd.DataFrame(testress)
+# 更改表的索引
+#data_df.columns = ['test']
+# 将文件写入excel表格中
+book = load_workbook("20212.xlsx")
+writer = pd.ExcelWriter('问题三结果（目前为空，用于存放输出）.xlsx',engine='openpyxl')
+writer.book=book
+data_df.to_excel(writer, 'Sheet1', float_format='%.5f')
+
+###保存预测结果到excel
+# 准备数据
+data_df = pd.DataFrame(aaas)
+# 更改表的索引
+#data_df.columns = ['yuce']
+# 将文件写入excel表格中
+#writers = pd.ExcelWriter(r'.')
+data_df.to_excel(writer, 'Sheet2', float_format='%.5f')
+writer.save()
+writer.close()
+book.close()
